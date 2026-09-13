@@ -1,0 +1,16 @@
+{
+  "name": "finly",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "npm run start -w mobile",
+    "api": "npm run dev -w api",
+    "test": "npm run test -w @finly/shared"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
