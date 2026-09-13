@@ -50,6 +50,7 @@ export type SalaryRule = {
 
 export type BankConnection = {
   requisitionId: string;
+  sessionId?: string;
   institutionId: string;
   status: string;
   accountIds: string[];

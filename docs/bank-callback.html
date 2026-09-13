@@ -43,9 +43,18 @@
   <body>
     <main>
       <h1>Можна повертатися в finly</h1>
-      <p>
+      <p id="msg">
         Банк підтвердив доступ. Закрий цю вкладку і в додатку натисни «Синхронізувати».
       </p>
     </main>
+    <script>
+      const params = new URLSearchParams(location.search || location.hash.replace("#", "?"));
+      const code = params.get("code");
+      if (code) {
+        document.getElementById("msg").textContent =
+          "Доступ підтверджено. Повертаю в додаток…";
+        location.replace("finly://bank/callback?code=" + encodeURIComponent(code));
+      }
+    </script>
   </body>
 </html>

@@ -23,9 +23,10 @@ export default function BankScreen() {
 
   useEffect(() => {
     const sub = Linking.addEventListener("url", (event) => {
-      if (event.url.includes("bank/callback")) {
+      if (event.url.includes("bank/callback") || event.url.includes("code=")) {
         void WebBrowser.dismissBrowser();
-        void onSync();
+        const raw = event.url.match(/[?&#]code=([^&#]+)/)?.[1];
+        void onSync(raw ? decodeURIComponent(raw) : undefined);
       }
     });
     return () => sub.remove();
@@ -37,10 +38,11 @@ export default function BankScreen() {
     try {
       const next = await connectBank(institution);
       if (next.link) {
-        const redirect = Linking.createURL("bank/callback");
+        const redirect = "https://makar190.github.io/finly/bank-callback.html";
         const result = await WebBrowser.openAuthSessionAsync(next.link, redirect);
-        if (result.type === "success") {
-          await onSync();
+        if (result.type === "success" && result.url) {
+          const raw = result.url.match(/[?&#]code=([^&#]+)/)?.[1];
+          await onSync(raw ? decodeURIComponent(raw) : undefined);
           return;
         }
       }
@@ -52,10 +54,10 @@ export default function BankScreen() {
     }
   };
 
-  const onSync = async () => {
+  const onSync = async (code?: string) => {
     setBusy(true);
     try {
-      const result = await syncBank();
+      const result = await syncBank(code);
       setMessage(`Нових списань у inbox: ${result.added}. Очікують ЗП: ${result.pendingSalary}.`);
     } catch (error) {
       Alert.alert("Синк", error instanceof Error ? error.message : "Не вдалося синхронізувати");
@@ -68,7 +70,7 @@ export default function BankScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <Screen>
         <Title>Банк</Title>
-        <Subtitle>GoCardless AIS. Секрети лишаються на API ({apiUrl}).</Subtitle>
+        <Subtitle>Enable Banking AIS. Секрети лишаються на API ({apiUrl}).</Subtitle>
         <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
           <Card style={{ marginBottom: 12 }}>
             <Text style={styles.label}>Статус</Text>

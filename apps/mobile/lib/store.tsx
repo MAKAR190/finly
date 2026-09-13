@@ -49,7 +49,7 @@ type Store = {
   saveSalaryRule: (rule: SalaryRule) => Promise<void>;
   saveApiUrl: (url: string) => Promise<void>;
   connectBank: (institution: "sandbox" | "pko") => Promise<BankConnection>;
-  syncBank: () => Promise<{ added: number; pendingSalary: number }>;
+  syncBank: (code?: string) => Promise<{ added: number; pendingSalary: number }>;
   disconnectBank: () => Promise<void>;
 };
 
@@ -185,15 +185,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await refresh();
       },
       connectBank: async (institution) => {
-        const Linking = await import("expo-linking");
-        const redirect = Linking.createURL("bank/callback");
-        const result = await bankApi.connectBank(apiUrl, institution, redirect);
+        const result = await bankApi.connectBank(apiUrl, institution);
         await db.saveConnection(result.connection);
         await refresh();
         return result.connection;
       },
-      syncBank: async () => {
-        const result = await bankApi.syncBank(apiUrl, salaryRule);
+      syncBank: async (code?: string) => {
+        const result = await bankApi.syncBank(apiUrl, salaryRule, code);
         await db.saveConnection(result.connection);
 
         let added = 0;

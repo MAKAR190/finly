@@ -22,24 +22,20 @@ export function getHealth(apiUrl: string) {
   return request<{ ok: boolean }>(apiUrl, "/health");
 }
 
-export function connectBank(
-  apiUrl: string,
-  institution: InstitutionChoice,
-  redirect: string,
-) {
+export function connectBank(apiUrl: string, institution: InstitutionChoice) {
   return request<{ connection: BankConnection }>(apiUrl, "/bank/connect", {
     method: "POST",
-    body: JSON.stringify({ institution, redirect }),
+    body: JSON.stringify({ institution }),
   });
 }
 
-export function syncBank(apiUrl: string, salaryRule: SalaryRule) {
+export function syncBank(apiUrl: string, salaryRule: SalaryRule, code?: string) {
   return request<{ connection: BankConnection; transactions: SyncedTransaction[] }>(
     apiUrl,
     "/bank/sync",
     {
       method: "POST",
-      body: JSON.stringify({ salaryRule }),
+      body: JSON.stringify({ salaryRule, code }),
     },
   );
 }
