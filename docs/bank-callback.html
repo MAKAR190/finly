@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="uk">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>finly — Bank connected</title>
+    <title>finly — повертаю в додаток</title>
     <style>
       :root {
         color-scheme: light;
@@ -35,25 +35,121 @@
         font-size: 1.6rem;
       }
       p {
-        margin: 0;
+        margin: 0 0 0.8rem;
         color: var(--muted);
+      }
+      a.btn {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0 0 0.5rem;
+        padding: 0.85rem 1rem;
+        border: 0;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        font: 600 16px/1.2 system-ui, sans-serif;
+        text-align: center;
+        text-decoration: none;
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>Можна повертатися в finly</h1>
-      <p id="msg">
-        Банк підтвердив доступ. Закрий цю вкладку і в додатку натисни «Синхронізувати».
-      </p>
+      <h1 id="title">Повертаю в finly</h1>
+      <p id="msg">Банк підтвердив доступ. Відкриваю додаток і підставляю код сам.</p>
+      <a id="open" class="btn" href="#">Відкрити finly</a>
     </main>
     <script>
-      const params = new URLSearchParams(location.search || location.hash.replace("#", "?"));
-      const code = params.get("code");
-      if (code) {
-        document.getElementById("msg").textContent =
-          "Доступ підтверджено. Повертаю в додаток…";
-        location.replace("finly://bank/callback?code=" + encodeURIComponent(code));
+      function params() {
+        return new URLSearchParams(location.search || location.hash.replace(/^#/, "?"));
+      }
+
+      function padBase64(value) {
+        return value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+      }
+
+      function decodeState(state) {
+        if (!state) return {};
+        if (/^(finly|exp|exps|http|https):/i.test(state)) return { app: state };
+        try {
+          const json = JSON.parse(atob(padBase64(state)));
+          return json && typeof json === "object" ? json : {};
+        } catch {
+          return {};
+        }
+      }
+
+      function withCode(appUrl, code) {
+        if (!appUrl) return "";
+        try {
+          const url = new URL(appUrl);
+          url.searchParams.set("code", code);
+          return url.toString();
+        } catch {
+          const join = appUrl.includes("?") ? "&" : "?";
+          return appUrl + join + "code=" + encodeURIComponent(code);
+        }
+      }
+
+      function toIntent(url) {
+        try {
+          const parsed = new URL(url);
+          const scheme = parsed.protocol.replace(":", "");
+          const path = (parsed.host ? parsed.host : "") + parsed.pathname + parsed.search + parsed.hash;
+          return "intent://" + path.replace(/^\/+/, "") + "#Intent;scheme=" + scheme + ";end";
+        } catch {
+          return "";
+        }
+      }
+
+      const query = params();
+      const code = query.get("code");
+      const error = query.get("error_description") || query.get("error");
+      const state = decodeState(query.get("state"));
+      const targets = [];
+      const add = (url) => {
+        if (url && !targets.includes(url)) targets.push(url);
+      };
+      add(withCode(state.app, code));
+      add(withCode(state.native, code));
+      add(withCode("finly:///bank/callback", code));
+      add(withCode("finly://bank/callback", code));
+      for (const item of [...targets]) add(toIntent(item));
+
+      const title = document.getElementById("title");
+      const msg = document.getElementById("msg");
+      const open = document.getElementById("open");
+
+      function openApp() {
+        const primary = targets[0];
+        if (!primary) return;
+        open.href = primary;
+        let index = 0;
+        const tick = () => {
+          if (index >= targets.length) return;
+          const next = targets[index];
+          index += 1;
+          location.href = next;
+        };
+        tick();
+        setTimeout(tick, 400);
+        setTimeout(tick, 900);
+      }
+
+      if (error) {
+        title.textContent = "Банк не підтвердив доступ";
+        msg.textContent = error;
+        open.hidden = true;
+      } else if (!code) {
+        msg.textContent = "У посиланні немає коду. Повернись у finly і підключи банк ще раз.";
+        open.hidden = true;
+      } else {
+        open.href = targets[0];
+        openApp();
+        setTimeout(() => {
+          msg.textContent = "Якщо додаток не відкрився сам — натисни кнопку нижче.";
+        }, 700);
       }
     </script>
   </body>
